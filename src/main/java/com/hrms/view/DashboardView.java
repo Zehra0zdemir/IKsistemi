@@ -9,7 +9,13 @@ import javafx.stage.Stage;
 
 public class DashboardView extends VBox {
 
+    private final Stage stage;
+    private final String userEmail;
+
     public DashboardView(Stage stage, String userEmail) {
+        this.stage = stage;
+        this.userEmail = userEmail;
+
         setSpacing(12);
         setPadding(new Insets(20));
         setAlignment(Pos.CENTER);
@@ -20,16 +26,21 @@ public class DashboardView extends VBox {
         Label welcome = new Label("Hoş geldin: " + userEmail);
 
         Button goReviewBtn = new Button("Performans Değerlendirme");
-        goReviewBtn.setOnAction(e -> {
-            // Bir sonraki adımda ReviewView'a bağlayacağız
-        });
+        goReviewBtn.setOnAction(e -> openReview());
 
         Button logoutBtn = new Button("Çıkış");
-        logoutBtn.setOnAction(e -> {
-            stage.getScene().setRoot(new LoginView(stage));
-            stage.setTitle("IK Sistemi - Giris");
-        });
+        logoutBtn.setOnAction(e -> logout());
 
         getChildren().addAll(title, welcome, goReviewBtn, logoutBtn);
+    }
+
+    private void openReview() {
+        stage.getScene().setRoot(new ReviewView(stage, userEmail));
+        stage.setTitle("IK Sistemi - Performans Degerlendirme");
+    }
+
+    private void logout() {
+        stage.getScene().setRoot(new LoginView(stage));
+        stage.setTitle("IK Sistemi - Giris");
     }
 }
