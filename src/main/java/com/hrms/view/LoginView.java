@@ -8,7 +8,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import com.hrms.view.DashboardView;
 
-
 public class LoginView extends VBox {
     private final TextField emailField = new TextField();
     private final PasswordField passwordField = new PasswordField();

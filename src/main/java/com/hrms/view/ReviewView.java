@@ -6,6 +6,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import com.hrms.controller.ReviewController;
 
 public class ReviewView extends ScrollPane {
 
@@ -57,10 +58,33 @@ public class ReviewView extends ScrollPane {
         Label info = new Label();
 
         submitBtn.setOnAction(e -> {
-            double avg = (tech.getValue() + comm.getValue() + team.getValue() + lead.getValue()) / 4.0;
-            info.setStyle("-fx-text-fill: green;");
-            info.setText("Kaydedildi. Ortalama puan: " + avg);
+            int techVal = tech.getValue();
+            int commVal = comm.getValue();
+            int teamVal = team.getValue();
+            int leadVal = lead.getValue();
+
+            // Şimdilik değerlendirilen çalışanı sabit veriyoruz.
+            // Bir sonraki adım: TextField ile employeeId alacağız veya listeden seçeceğiz.
+            int employeeId = 1;
+
+            var result = ReviewController.submit(
+                    userEmail,
+                    employeeId,
+                    techVal, commVal, teamVal, leadVal,
+                    strengths.getText(),
+                    improvements.getText()
+            );
+
+            if (result.success()) {
+                info.setStyle("-fx-text-fill: green;");
+                info.setText("Kaydedildi. Ortalama: " + result.review().getOverallRating());
+                // Debug: System.out.println("Review created: " + result.review().getOverallRating());
+            } else {
+                info.setStyle("-fx-text-fill: red;");
+                info.setText(result.message());
+            }
         });
+
 
         Button backBtn = new Button("Geri Dön");
         backBtn.setOnAction(e -> backToDashboard());
