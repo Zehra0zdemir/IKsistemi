@@ -11,8 +11,9 @@ public class ReviewDAO {
 
         String sql = """
             INSERT INTO reviews
-            (employee_id, evaluator_email, tech, comm, team, leadership, strengths, improvements, overall_rating, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (employee_id, evaluator_email, tech, comm, team, leadership,
+             strengths, improvements, goals, overall_rating, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -26,9 +27,10 @@ public class ReviewDAO {
             ps.setInt(6, r.getLead()); // Java'da lead, DB'de leadership
             ps.setString(7, r.getStrengths());
             ps.setString(8, r.getImprovements());
-            ps.setDouble(9, r.getOverallRating());
-            ps.setString(10, r.getStatus());
-            ps.setTimestamp(11, Timestamp.valueOf(r.getCreatedAt()));
+            ps.setString(9, r.getGoals());         // ✅ goals burada
+            ps.setDouble(10, r.getOverallRating());
+            ps.setString(11, r.getStatus());
+            ps.setTimestamp(12, Timestamp.valueOf(r.getCreatedAt()));
 
             int affected = ps.executeUpdate();
             if (affected == 0) throw new SQLException("Insert başarısız, satır eklenmedi.");

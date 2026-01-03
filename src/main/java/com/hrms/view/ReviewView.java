@@ -54,6 +54,10 @@ public class ReviewView extends ScrollPane {
         improvements.setPromptText("Gelişim alanları");
         improvements.setPrefRowCount(3);
 
+        TextArea goalsArea = new TextArea();
+        goalsArea.setPromptText("Gelecek dönem hedefleri");
+        goalsArea.setPrefRowCount(3);
+
         Button submitBtn = new Button("Kaydet");
         Label info = new Label();
 
@@ -63,28 +67,30 @@ public class ReviewView extends ScrollPane {
             int teamVal = team.getValue();
             int leadVal = lead.getValue();
 
-            // Şimdilik değerlendirilen çalışanı sabit veriyoruz.
-            // Bir sonraki adım: TextField ile employeeId alacağız veya listeden seçeceğiz.
-            int employeeId = 1;
+            String normalizedGoals = goalsArea.getText();
+            if (normalizedGoals == null || normalizedGoals.isBlank()) {
+                normalizedGoals = null;
+            }
+
+            int employeeId = 1; // şimdilik sabit
 
             var result = ReviewController.submit(
                     userEmail,
                     employeeId,
                     techVal, commVal, teamVal, leadVal,
                     strengths.getText(),
-                    improvements.getText()
+                    improvements.getText(),
+                    normalizedGoals
             );
 
             if (result.success()) {
                 info.setStyle("-fx-text-fill: green;");
                 info.setText("Kaydedildi. Ortalama: " + result.review().getOverallRating());
-                // Debug: System.out.println("Review created: " + result.review().getOverallRating());
             } else {
                 info.setStyle("-fx-text-fill: red;");
                 info.setText(result.message());
             }
         });
-
 
         Button backBtn = new Button("Geri Dön");
         backBtn.setOnAction(e -> backToDashboard());
@@ -94,6 +100,7 @@ public class ReviewView extends ScrollPane {
                 grid,
                 new Label("Güçlü Yönler"), strengths,
                 new Label("Gelişim Alanları"), improvements,
+                new Label("Hedefler"), goalsArea,
                 submitBtn, info, backBtn
         );
 

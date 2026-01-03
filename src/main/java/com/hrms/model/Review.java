@@ -6,7 +6,7 @@ public class Review {
 
     private int reviewId;                 // DB'den gelen id
     private final String evaluatorEmail;  // değerlendiren
-    private final int employeeId;          // değerlendirilen
+    private final int employeeId;         // değerlendirilen
 
     private final int tech;
     private final int comm;
@@ -16,8 +16,10 @@ public class Review {
     private final String strengths;
     private final String improvements;
 
+    private final String goals;           // ✅ hedefler eklendi
+
     private final double overallRating;
-    private final String status;           // SUBMITTED, APPROVED vs
+    private final String status;          // SUBMITTED, APPROVED vs
     private final LocalDateTime createdAt;
 
     public Review(
@@ -26,6 +28,7 @@ public class Review {
             int tech, int comm, int team, int lead,
             String strengths,
             String improvements,
+            String goals,
             double overallRating,
             String status,
             LocalDateTime createdAt
@@ -38,6 +41,7 @@ public class Review {
         this.lead = lead;
         this.strengths = strengths;
         this.improvements = improvements;
+        this.goals = goals;
         this.overallRating = overallRating;
         this.status = status;
         this.createdAt = createdAt;
@@ -54,6 +58,7 @@ public class Review {
     public int getLead() { return lead; }
     public String getStrengths() { return strengths; }
     public String getImprovements() { return improvements; }
+    public String getGoals() { return goals; }      // ✅ getter
     public double getOverallRating() { return overallRating; }
     public String getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }

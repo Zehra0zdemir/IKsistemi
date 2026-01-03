@@ -1,5 +1,6 @@
 package com.hrms.view;
 
+import com.hrms.controller.ReportController;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -11,6 +12,8 @@ public class DashboardView extends VBox {
 
     private final Stage stage;
     private final String userEmail;
+
+    private final Label statsLabel = new Label();
 
     public DashboardView(Stage stage, String userEmail) {
         this.stage = stage;
@@ -25,13 +28,29 @@ public class DashboardView extends VBox {
 
         Label welcome = new Label("Hoş geldin: " + userEmail);
 
+        Button refreshBtn = new Button("İstatistikleri Yenile");
+        refreshBtn.setOnAction(e -> loadStats());
+
         Button goReviewBtn = new Button("Performans Değerlendirme");
         goReviewBtn.setOnAction(e -> openReview());
 
         Button logoutBtn = new Button("Çıkış");
         logoutBtn.setOnAction(e -> logout());
 
-        getChildren().addAll(title, welcome, goReviewBtn, logoutBtn);
+        statsLabel.setStyle("-fx-font-size: 13px;");
+        loadStats();
+
+        getChildren().addAll(title, welcome, statsLabel, refreshBtn, goReviewBtn, logoutBtn);
+    }
+
+    private void loadStats() {
+        var s = ReportController.getStats();
+        statsLabel.setText(
+                "Toplam Çalışan: " + s.totalEmployees() + "\n" +
+                        "Toplam Değerlendirme: " + s.totalReviews() + "\n" +
+                        "Ortalama Puan: " + String.format("%.2f", s.avgRating()) + "\n" +
+                        "Düşük Performans (<3.0): " + s.lowPerformanceCount()
+        );
     }
 
     private void openReview() {
