@@ -1,7 +1,7 @@
 package com.hrms.controller;
 
 import com.hrms.dao.ReviewDAO;
-import com.hrms.service.ReviewService;
+import com.hrms.services.ReviewService;
 
 public class ReviewController {
 

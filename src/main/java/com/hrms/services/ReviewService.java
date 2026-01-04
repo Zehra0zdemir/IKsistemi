@@ -1,4 +1,4 @@
-package com.hrms.service;
+package com.hrms.services;
 
 import com.hrms.model.Review;
 

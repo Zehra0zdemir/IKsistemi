@@ -1,6 +1,6 @@
 package com.hrms.controller;
 
-import com.hrms.service.ReportService;
+import com.hrms.services.ReportService;
 
 public class ReportController {
 

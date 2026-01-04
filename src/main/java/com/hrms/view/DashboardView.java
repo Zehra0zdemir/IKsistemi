@@ -34,13 +34,17 @@ public class DashboardView extends VBox {
         Button goReviewBtn = new Button("Performans Değerlendirme");
         goReviewBtn.setOnAction(e -> openReview());
 
+        Button goPayrollBtn = new Button("Bordro / Maaş");
+        goPayrollBtn.setOnAction(e -> openPayroll());
+
+
         Button logoutBtn = new Button("Çıkış");
         logoutBtn.setOnAction(e -> logout());
 
         statsLabel.setStyle("-fx-font-size: 13px;");
         loadStats();
 
-        getChildren().addAll(title, welcome, statsLabel, refreshBtn, goReviewBtn, logoutBtn);
+        getChildren().addAll(title, welcome, statsLabel, refreshBtn, goReviewBtn, goPayrollBtn, logoutBtn);
     }
 
     private void loadStats() {
@@ -57,6 +61,12 @@ public class DashboardView extends VBox {
         stage.getScene().setRoot(new ReviewView(stage, userEmail));
         stage.setTitle("IK Sistemi - Performans Degerlendirme");
     }
+
+    private void openPayroll() {
+    stage.getScene().setRoot(new PayrollView(stage, userEmail));
+    stage.setTitle("IK Sistemi - Bordro");
+    }
+
 
     private void logout() {
         stage.getScene().setRoot(new LoginView(stage));
