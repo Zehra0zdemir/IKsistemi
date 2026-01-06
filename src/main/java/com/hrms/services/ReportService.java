@@ -1,10 +1,10 @@
 package com.hrms.services;
 
-import com.hrms.util.DatabaseConnection;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+
+import com.hrms.util.DatabaseConnection;
 
 public class ReportService {
 
@@ -25,7 +25,7 @@ public class ReportService {
     }
 
     private int safeIntQuery(String sql) {
-        try (Connection c = DatabaseConnection.getConnection();
+        try (Connection c = DatabaseConnection.getInstance().getConnection();
              PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) return rs.getInt(1);
@@ -37,7 +37,7 @@ public class ReportService {
     }
 
     private double safeDoubleQuery(String sql) {
-        try (Connection c = DatabaseConnection.getConnection();
+        try (Connection c = DatabaseConnection.getInstance().getConnection();
              PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) return rs.getDouble(1);

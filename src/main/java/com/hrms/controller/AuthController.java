@@ -1,12 +1,12 @@
 package com.hrms.controller;
 
-import com.hrms.util.DatabaseConnection;
-import com.hrms.util.PasswordUtil;
-import com.hrms.util.ValidationUtil;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+
+import com.hrms.util.DatabaseConnection;
+import com.hrms.util.PasswordUtil;
+import com.hrms.util.ValidationUtil;
 
 public class AuthController {
 
@@ -21,7 +21,7 @@ public class AuthController {
 
         String sql = "SELECT password_hash FROM users WHERE email = ? LIMIT 1";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, email.trim().toLowerCase());

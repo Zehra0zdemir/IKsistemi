@@ -1,12 +1,15 @@
 package com.hrms.view;
 
 import com.hrms.controller.AuthController;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import com.hrms.view.DashboardView;
 
 public class LoginView extends VBox {
     private final TextField emailField = new TextField();

@@ -1,11 +1,15 @@
 package com.hrms.dao;
 
-import com.hrms.model.Payroll;
-import com.hrms.util.DatabaseConnection;
-
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.hrms.model.Payroll;
+import com.hrms.util.DatabaseConnection;
 
 public class PayrollDAO {
 
@@ -15,7 +19,8 @@ public class PayrollDAO {
             WHERE employee_id = ? AND period_id = ?
         """;
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, employeeId);
@@ -35,7 +40,8 @@ public class PayrollDAO {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setInt(1, p.getEmployeeId());
@@ -64,7 +70,8 @@ public class PayrollDAO {
 
         String sql = "SELECT * FROM payroll WHERE employee_id = ? ORDER BY created_at DESC";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, employeeId);

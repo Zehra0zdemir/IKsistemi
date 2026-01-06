@@ -1,12 +1,17 @@
 package com.hrms.dao;
 
-import com.hrms.model.PayPeriod;
-import com.hrms.util.DatabaseConnection;
-
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.hrms.model.PayPeriod;
+import com.hrms.util.DatabaseConnection;
 
 public class PayPeriodDAO {
 
@@ -20,7 +25,8 @@ public class PayPeriodDAO {
             ORDER BY start_date DESC
         """;
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
@@ -42,7 +48,8 @@ public class PayPeriodDAO {
             VALUES (?, ?)
         """;
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setDate(1, Date.valueOf(start));
@@ -60,7 +67,8 @@ public class PayPeriodDAO {
     public void closePeriod(int periodId) throws SQLException {
         String sql = "UPDATE pay_periods SET status = 'CLOSED' WHERE period_id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, periodId);

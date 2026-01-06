@@ -1,9 +1,14 @@
 package com.hrms.dao;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+
 import com.hrms.model.Review;
 import com.hrms.util.DatabaseConnection;
-
-import java.sql.*;
 
 public class ReviewDAO {
 
@@ -16,7 +21,8 @@ public class ReviewDAO {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setInt(1, r.getEmployeeId());
