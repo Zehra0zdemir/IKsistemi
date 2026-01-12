@@ -145,7 +145,7 @@ public class PayrollView extends BorderPane {
         netCol.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(String.valueOf(c.getValue().getNetSalary())));
 
         table.getColumns().setAll(java.util.List.of(idCol, periodCol, grossCol, taxCol, netCol));
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
 
         box.getChildren().addAll(t, table);

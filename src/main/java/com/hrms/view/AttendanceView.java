@@ -11,27 +11,12 @@ import com.hrms.model.Employee;
 import com.hrms.model.LeaveRequest;
 
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
 public class AttendanceView extends BorderPane {
@@ -48,336 +33,472 @@ public class AttendanceView extends BorderPane {
     private final TextField checkOutField = new TextField();
     private final TextArea notesArea = new TextArea();
     private final Label infoLabel = new Label();
-    private final Label statusLabel = new Label();
 
     // İzin formu
     private final DatePicker leaveStartPicker = new DatePicker();
     private final DatePicker leaveEndPicker = new DatePicker();
     private final ComboBox<String> leaveTypeBox = new ComboBox<>();
     private final TextArea leaveReasonArea = new TextArea();
+    private final Label leaveInfoLabel = new Label();
 
     // Tablolar
     private final TableView<Attendance> attendanceTable = new TableView<>();
     private final TableView<LeaveRequest> leaveTable = new TableView<>();
 
-    private final TabPane tabPane = new TabPane();
+    private StackPane contentArea;
 
     public AttendanceView(Stage stage, String userEmail) {
         this.stage = stage;
         this.userEmail = userEmail;
 
-        setPadding(new Insets(20));
+        this.setStyle("-fx-background-color: #f8fafc;");
 
-        Label title = new Label("Devam Takip Sistemi");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        // Sidebar
+        VBox sidebar = createSidebar();
 
-        Button backBtn = new Button("Geri Dön");
-        backBtn.setOnAction(e -> goBack());
+        // Content area
+        contentArea = new StackPane();
+        contentArea.setPadding(new Insets(30));
+        HBox.setHgrow(contentArea, Priority.ALWAYS);
 
-        HBox topBar = new HBox(10);
-        topBar.setAlignment(Pos.CENTER_LEFT);
-        topBar.getChildren().addAll(title, new Region(), backBtn);
-        HBox.setHgrow(topBar.getChildren().get(1), Priority.ALWAYS);
+        // Default: Show check-in/out
+        showCheckInOut();
 
-        setTop(topBar);
-        BorderPane.setMargin(getTop(), new Insets(0, 0, 10, 0));
+        HBox mainLayout = new HBox();
+        mainLayout.getChildren().addAll(sidebar, contentArea);
 
-        buildTabs();
-        setCenter(tabPane);
+        setCenter(mainLayout);
 
         loadEmployees();
         loadLeaveTypes();
     }
 
-    private void buildTabs() {
-        Tab checkInOutTab = new Tab("Giriş/Çıkış");
-        checkInOutTab.setClosable(false);
-        checkInOutTab.setContent(buildCheckInOutPane());
+    private VBox createSidebar() {
+        VBox sidebar = new VBox();
+        sidebar.setPrefWidth(250);
+        sidebar.setStyle("-fx-background-color: #1e293b;");
+        sidebar.setPadding(new Insets(20));
+        sidebar.setSpacing(10);
 
-        Tab attendanceTab = new Tab("Devam Kayıtları");
-        attendanceTab.setClosable(false);
-        attendanceTab.setContent(buildAttendancePane());
+        // Logo/Title
+        Label title = new Label("📋 Devam Takip");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white;");
+        title.setPadding(new Insets(0, 0, 20, 0));
 
-        Tab leaveTab = new Tab("İzin Talepleri");
-        leaveTab.setClosable(false);
-        leaveTab.setContent(buildLeavePane());
+        // Navigation buttons
+        Button checkInBtn = createNavButton("🕐 Giriş/Çıkış", true);
+        checkInBtn.setOnAction(e -> {
+            showCheckInOut();
+            updateActiveButton(checkInBtn);
+        });
 
-        tabPane.getTabs().addAll(checkInOutTab, attendanceTab, leaveTab);
+        Button recordsBtn = createNavButton("📊 Devam Kayıtları", false);
+        recordsBtn.setOnAction(e -> {
+            showAttendanceRecords();
+            updateActiveButton(recordsBtn);
+        });
+
+        Button leaveBtn = createNavButton("🏖 İzin Talebi", false);
+        leaveBtn.setOnAction(e -> {
+            showLeaveRequest();
+            updateActiveButton(leaveBtn);
+        });
+
+        Button leaveListBtn = createNavButton("📝 İzin Listesi", false);
+        leaveListBtn.setOnAction(e -> {
+            showLeaveList();
+            updateActiveButton(leaveListBtn);
+        });
+
+        Region spacer = new Region();
+        VBox.setVgrow(spacer, Priority.ALWAYS);
+
+        Button logoutBtn = new Button("🚪 Geri Dön");
+        logoutBtn.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; -fx-padding: 12 20; " +
+                          "-fx-border-radius: 8; -fx-background-radius: 8; -fx-font-size: 14px; -fx-cursor: hand;");
+        logoutBtn.setOnMouseEntered(e -> logoutBtn.setStyle("-fx-background-color: #dc2626; -fx-text-fill: white; " +
+                                                            "-fx-padding: 12 20; -fx-border-radius: 8; -fx-background-radius: 8; -fx-font-size: 14px;"));
+        logoutBtn.setOnMouseExited(e -> logoutBtn.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; " +
+                                                           "-fx-padding: 12 20; -fx-border-radius: 8; -fx-background-radius: 8; -fx-font-size: 14px;"));
+        logoutBtn.setMaxWidth(Double.MAX_VALUE);
+        logoutBtn.setOnAction(e -> goBack());
+
+        sidebar.getChildren().addAll(title, checkInBtn, recordsBtn, leaveBtn, leaveListBtn, spacer, logoutBtn);
+
+        return sidebar;
     }
 
-    // ============================================
-    // GİRİŞ/ÇIKIŞ SEKMESİ
-    // ============================================
-    private Pane buildCheckInOutPane() {
-        BorderPane pane = new BorderPane();
-        pane.setPadding(new Insets(20));
-
-        VBox leftBox = new VBox(15);
-        leftBox.setPrefWidth(350);
-        leftBox.setPadding(new Insets(15));
-        leftBox.setStyle("""
-            -fx-background-color: #f7f7f7;
-            -fx-background-radius: 12;
-        """);
-
-        Label formTitle = new Label("Hızlı İşlemler");
-        formTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
-
-        employeeBox.setPrefWidth(300);
-        employeeBox.setPromptText("Çalışan seçin...");
-
-        Button checkInBtn = new Button("Giriş Yap (Check-In)");
-        checkInBtn.setMaxWidth(Double.MAX_VALUE);
-        checkInBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px;");
-        checkInBtn.setOnAction(e -> checkIn());
-
-        Button checkOutBtn = new Button("Çıkış Yap (Check-Out)");
-        checkOutBtn.setMaxWidth(Double.MAX_VALUE);
-        checkOutBtn.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 14px;");
-        checkOutBtn.setOnAction(e -> checkOut());
-
-        Button statusBtn = new Button("Bugünkü Durumu Kontrol Et");
-        statusBtn.setMaxWidth(Double.MAX_VALUE);
-        statusBtn.setOnAction(e -> checkTodayStatus());
-
-        statusLabel.setWrapText(true);
-        statusLabel.setStyle("-fx-font-size: 13px; -fx-padding: 10; -fx-background-color: white; -fx-border-color: #ddd;");
-
-        Separator sep = new Separator();
-
-        Label manualTitle = new Label("Manuel Kayıt Ekle");
-        manualTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
-
-        datePicker.setValue(LocalDate.now());
-        checkInField.setPromptText("09:00");
-        checkOutField.setPromptText("18:00");
-        notesArea.setPrefRowCount(2);
-        notesArea.setPromptText("Not (opsiyonel)");
-
-        GridPane manualGrid = new GridPane();
-        manualGrid.setHgap(10);
-        manualGrid.setVgap(8);
-        int row = 0;
-        manualGrid.add(new Label("Tarih:"), 0, row);
-        manualGrid.add(datePicker, 1, row++);
-        manualGrid.add(new Label("Giriş:"), 0, row);
-        manualGrid.add(checkInField, 1, row++);
-        manualGrid.add(new Label("Çıkış:"), 0, row);
-        manualGrid.add(checkOutField, 1, row++);
-        manualGrid.add(new Label("Not:"), 0, row);
-        manualGrid.add(notesArea, 1, row++);
-
-        Button addManualBtn = new Button("Manuel Kayıt Ekle");
-        addManualBtn.setMaxWidth(Double.MAX_VALUE);
-        addManualBtn.setOnAction(e -> addManualAttendance());
-
-        infoLabel.setWrapText(true);
-
-        leftBox.getChildren().addAll(
-            formTitle, new Label("Çalışan:"), employeeBox,
-            checkInBtn, checkOutBtn, statusBtn, statusLabel,
-            sep, manualTitle, manualGrid, addManualBtn, infoLabel
-        );
-
-        pane.setLeft(leftBox);
-
-        VBox rightBox = new VBox(10);
-        rightBox.setPadding(new Insets(0, 0, 0, 20));
-        Label todayLabel = new Label("Bugünkü Devam Kayıtları");
-        todayLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
-        Button refreshBtn = new Button("Yenile");
-        refreshBtn.setOnAction(e -> loadTodayAttendances());
-        HBox headerBox = new HBox(10, todayLabel, refreshBtn);
-        rightBox.getChildren().addAll(headerBox, buildTodayAttendanceTable());
-        pane.setCenter(rightBox);
-
-        loadTodayAttendances();
-
-        return pane;
+    private Button createNavButton(String text, boolean active) {
+        Button btn = new Button(text);
+        btn.setMaxWidth(Double.MAX_VALUE);
+        btn.setAlignment(Pos.CENTER_LEFT);
+        btn.setPadding(new Insets(12, 16, 12, 16));
+        
+        if (active) {
+            btn.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-size: 14px; " +
+                        "-fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;");
+        } else {
+            btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #cbd5e1; -fx-font-size: 14px; " +
+                        "-fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;");
+            btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #334155; -fx-text-fill: white; -fx-font-size: 14px; " +
+                                                    "-fx-border-radius: 8; -fx-background-radius: 8;"));
+            btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #cbd5e1; -fx-font-size: 14px; " +
+                                                   "-fx-border-radius: 8; -fx-background-radius: 8;"));
+        }
+        
+        return btn;
     }
 
-    private TableView<Attendance> buildTodayAttendanceTable() {
-        TableView<Attendance> table = new TableView<>();
-
-        TableColumn<Attendance, String> nameCol = new TableColumn<>("Çalışan");
-        nameCol.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
-        nameCol.setPrefWidth(150);
-
-        TableColumn<Attendance, LocalTime> inCol = new TableColumn<>("Giriş");
-        inCol.setCellValueFactory(new PropertyValueFactory<>("checkIn"));
-        inCol.setPrefWidth(80);
-
-        TableColumn<Attendance, LocalTime> outCol = new TableColumn<>("Çıkış");
-        outCol.setCellValueFactory(new PropertyValueFactory<>("checkOut"));
-        outCol.setPrefWidth(80);
-
-        TableColumn<Attendance, BigDecimal> hoursCol = new TableColumn<>("Saat");
-        hoursCol.setCellValueFactory(new PropertyValueFactory<>("hoursWorked"));
-        hoursCol.setPrefWidth(70);
-
-        TableColumn<Attendance, String> statusCol = new TableColumn<>("Durum");
-        statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
-        statusCol.setPrefWidth(100);
-
-        table.getColumns().addAll(nameCol, inCol, outCol, hoursCol, statusCol);
-        return table;
-    }
-
-    // ============================================
-    // DEVAM KAYITLARI SEKMESİ
-    // ============================================
-    private Pane buildAttendancePane() {
-        BorderPane pane = new BorderPane();
-        pane.setPadding(new Insets(20));
-
-        VBox leftBox = new VBox(15);
-        leftBox.setPrefWidth(300);
-
-        ComboBox<Employee> empBox = new ComboBox<>();
-        empBox.setItems(employeeBox.getItems());
-        empBox.setConverter(employeeBox.getConverter());
-
-        DatePicker startPicker = new DatePicker(LocalDate.now().minusMonths(1));
-        DatePicker endPicker = new DatePicker(LocalDate.now());
-
-        Button loadBtn = new Button("Kayıtları Getir");
-        loadBtn.setMaxWidth(Double.MAX_VALUE);
-        loadBtn.setOnAction(e -> {
-            Employee emp = empBox.getValue();
-            if (emp == null) {
-                showError("Çalışan seçin");
-                return;
+    private void updateActiveButton(Button activeBtn) {
+        // Reset all buttons in sidebar
+        VBox sidebar = (VBox) ((HBox) getCenter()).getChildren().get(0);
+        for (javafx.scene.Node node : sidebar.getChildren()) {
+            if (node instanceof Button && node != activeBtn) {
+                Button btn = (Button) node;
+                String text = btn.getText();
+                if (!text.contains("Geri")) {
+                    btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #cbd5e1; -fx-font-size: 14px; " +
+                                "-fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;");
+                    btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #334155; -fx-text-fill: white; -fx-font-size: 14px; " +
+                                                            "-fx-border-radius: 8; -fx-background-radius: 8;"));
+                    btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #cbd5e1; -fx-font-size: 14px; " +
+                                                           "-fx-border-radius: 8; -fx-background-radius: 8;"));
+                }
             }
-            loadAttendanceHistory(emp.getEmployeeId(), startPicker.getValue(), endPicker.getValue());
-        });
-
-        Label statsLabel = new Label();
-        statsLabel.setWrapText(true);
-        statsLabel.setStyle("-fx-padding: 10; -fx-background-color: #e3f2fd; -fx-border-color: #2196F3;");
-
-        Button calcBtn = new Button("İstatistik Hesapla");
-        calcBtn.setMaxWidth(Double.MAX_VALUE);
-        calcBtn.setOnAction(e -> {
-            Employee emp = empBox.getValue();
-            if (emp == null) return;
-            calculateStats(emp.getEmployeeId(), startPicker.getValue(), endPicker.getValue(), statsLabel);
-        });
-
-        leftBox.getChildren().addAll(
-            new Label("Çalışan:"), empBox,
-            new Label("Başlangıç:"), startPicker,
-            new Label("Bitiş:"), endPicker,
-            loadBtn, calcBtn, statsLabel
-        );
-
-        pane.setLeft(leftBox);
-        pane.setCenter(buildAttendanceTable());
-        BorderPane.setMargin(pane.getCenter(), new Insets(0, 0, 0, 20));
-
-        return pane;
+        }
+        
+        activeBtn.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-size: 14px; " +
+                          "-fx-border-radius: 8; -fx-background-radius: 8;");
+        activeBtn.setOnMouseEntered(null);
+        activeBtn.setOnMouseExited(null);
     }
 
-    private TableView<Attendance> buildAttendanceTable() {
-        TableColumn<Attendance, LocalDate> dateCol = new TableColumn<>("Tarih");
-        dateCol.setCellValueFactory(new PropertyValueFactory<>("attendanceDate"));
-        dateCol.setPrefWidth(100);
+    private void showCheckInOut() {
+        VBox content = new VBox(20);
+        content.setMaxWidth(800);
 
-        TableColumn<Attendance, LocalTime> inCol = new TableColumn<>("Giriş");
-        inCol.setCellValueFactory(new PropertyValueFactory<>("checkIn"));
+        // Header
+        VBox header = new VBox(5);
+        Label title = new Label("🕐 Giriş/Çıkış Kaydı");
+        title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+        
+        Label subtitle = new Label("Günlük giriş ve çıkış saatlerini kaydedin");
+        subtitle.setStyle("-fx-text-fill: #64748b; -fx-font-size: 14px;");
+        
+        header.getChildren().addAll(title, subtitle);
 
-        TableColumn<Attendance, LocalTime> outCol = new TableColumn<>("Çıkış");
-        outCol.setCellValueFactory(new PropertyValueFactory<>("checkOut"));
-
-        TableColumn<Attendance, BigDecimal> hoursCol = new TableColumn<>("Saat");
-        hoursCol.setCellValueFactory(new PropertyValueFactory<>("hoursWorked"));
-
-        TableColumn<Attendance, String> statusCol = new TableColumn<>("Durum");
-        statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
-
-        TableColumn<Attendance, String> notesCol = new TableColumn<>("Not");
-        notesCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
-        notesCol.setPrefWidth(150);
-
-        attendanceTable.getColumns().addAll(dateCol, inCol, outCol, hoursCol, statusCol, notesCol);
-        return attendanceTable;
-    }
-
-    // ============================================
-    // İZİN TALEPLERİ SEKMESİ
-    // ============================================
-    private Pane buildLeavePane() {
-        BorderPane pane = new BorderPane();
-        pane.setPadding(new Insets(20));
-
-        VBox leftBox = new VBox(15);
-        leftBox.setPrefWidth(350);
-        leftBox.setPadding(new Insets(15));
-        leftBox.setStyle("-fx-background-color: #f7f7f7; -fx-background-radius: 12;");
-
-        Label formTitle = new Label("Yeni İzin Talebi");
-        formTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
-
-        ComboBox<Employee> empBox = new ComboBox<>();
-        empBox.setItems(employeeBox.getItems());
-        empBox.setConverter(employeeBox.getConverter());
-
-        leaveStartPicker.setValue(LocalDate.now());
-        leaveEndPicker.setValue(LocalDate.now().plusDays(1));
-        leaveReasonArea.setPrefRowCount(3);
-        leaveReasonArea.setPromptText("İzin sebebi...");
+        // Form Card
+        VBox formCard = new VBox(20);
+        formCard.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                         "-fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 24; " +
+                         "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);");
 
         GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
+        grid.setHgap(15);
+        grid.setVgap(15);
+
         int row = 0;
-        grid.add(new Label("Çalışan:"), 0, row);
-        grid.add(empBox, 1, row++);
-        grid.add(new Label("İzin Tipi:"), 0, row);
-        grid.add(leaveTypeBox, 1, row++);
-        grid.add(new Label("Başlangıç:"), 0, row);
-        grid.add(leaveStartPicker, 1, row++);
-        grid.add(new Label("Bitiş:"), 0, row);
-        grid.add(leaveEndPicker, 1, row++);
-        grid.add(new Label("Sebep:"), 0, row);
-        grid.add(leaveReasonArea, 1, row++);
 
-        Button createBtn = new Button("İzin Talebi Oluştur");
-        createBtn.setMaxWidth(Double.MAX_VALUE);
-        createBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
-        createBtn.setOnAction(e -> createLeaveRequest(empBox));
+        // Çalışan
+        grid.add(createLabel("Çalışan"), 0, row);
+        employeeBox.setPromptText("Seçiniz");
+        employeeBox.setPrefHeight(40);
+        employeeBox.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                            "-fx-border-radius: 6; -fx-background-radius: 6;");
+        employeeBox.setMaxWidth(Double.MAX_VALUE);
+        grid.add(employeeBox, 1, row++);
 
-        Button pendingBtn = new Button("Bekleyen Talepler");
-        pendingBtn.setMaxWidth(Double.MAX_VALUE);
-        pendingBtn.setOnAction(e -> loadPendingLeaves());
+        // Tarih
+        grid.add(createLabel("Tarih"), 0, row);
+        datePicker.setValue(LocalDate.now());
+        datePicker.setPrefHeight(40);
+        datePicker.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                           "-fx-border-radius: 6; -fx-background-radius: 6;");
+        datePicker.setMaxWidth(Double.MAX_VALUE);
+        grid.add(datePicker, 1, row++);
 
-        Button allLeavesBtn = new Button("Tüm Talepler");
-        allLeavesBtn.setMaxWidth(Double.MAX_VALUE);
-        allLeavesBtn.setOnAction(e -> loadAllLeaves(empBox));
+        // Giriş Saati
+        grid.add(createLabel("Giriş Saati"), 0, row);
+        checkInField.setPromptText("HH:MM (örn: 09:00)");
+        checkInField.setPrefHeight(40);
+        checkInField.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                             "-fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10; -fx-font-size: 14px;");
+        grid.add(checkInField, 1, row++);
 
-        Label leaveInfo = new Label();
-        leaveInfo.setWrapText(true);
+        // Çıkış Saati
+        grid.add(createLabel("Çıkış Saati"), 0, row);
+        checkOutField.setPromptText("HH:MM (örn: 18:00)");
+        checkOutField.setPrefHeight(40);
+        checkOutField.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                              "-fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10; -fx-font-size: 14px;");
+        grid.add(checkOutField, 1, row++);
 
-        leftBox.getChildren().addAll(
-            formTitle, grid, createBtn, pendingBtn, allLeavesBtn, leaveInfo
-        );
+        // Notlar
+        grid.add(createLabel("Notlar"), 0, row);
+        notesArea.setPromptText("İsteğe bağlı notlar...");
+        notesArea.setPrefRowCount(3);
+        notesArea.setPrefHeight(80);
+        notesArea.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                          "-fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10; -fx-font-size: 14px;");
+        grid.add(notesArea, 1, row++);
 
-        pane.setLeft(leftBox);
-        pane.setCenter(buildLeaveTable());
-        BorderPane.setMargin(pane.getCenter(), new Insets(0, 0, 0, 20));
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setMinWidth(150);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().addAll(col1, col2);
 
-        return pane;
+        // Buttons
+        HBox buttonBox = new HBox(10);
+        
+        Button saveBtn = new Button("💾 Kaydet");
+        saveBtn.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; -fx-padding: 12 24; " +
+                        "-fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 14px;");
+        saveBtn.setOnMouseEntered(e -> saveBtn.setStyle("-fx-background-color: #059669; -fx-text-fill: white; " +
+                                                        "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
+        saveBtn.setOnMouseExited(e -> saveBtn.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; " +
+                                                       "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
+        saveBtn.setOnAction(e -> saveAttendance());
+
+        Button clearBtn = new Button("🔄 Temizle");
+        clearBtn.setStyle("-fx-background-color: #64748b; -fx-text-fill: white; -fx-padding: 12 24; " +
+                         "-fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 14px;");
+        clearBtn.setOnMouseEntered(e -> clearBtn.setStyle("-fx-background-color: #475569; -fx-text-fill: white; " +
+                                                          "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
+        clearBtn.setOnMouseExited(e -> clearBtn.setStyle("-fx-background-color: #64748b; -fx-text-fill: white; " +
+                                                         "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
+        clearBtn.setOnAction(e -> clearCheckInForm());
+
+        buttonBox.getChildren().addAll(saveBtn, clearBtn);
+
+        infoLabel.setWrapText(true);
+        infoLabel.setMaxWidth(Double.MAX_VALUE);
+
+        formCard.getChildren().addAll(grid, buttonBox, infoLabel);
+
+        content.getChildren().addAll(header, formCard);
+        
+        contentArea.getChildren().clear();
+        contentArea.getChildren().add(content);
     }
 
-    private TableView<LeaveRequest> buildLeaveTable() {
-        TableColumn<LeaveRequest, String> empCol = new TableColumn<>("Çalışan");
-        empCol.setCellValueFactory(new PropertyValueFactory<>("employeeName"));
-        empCol.setPrefWidth(120);
+    private void showAttendanceRecords() {
+        VBox content = new VBox(20);
 
-        TableColumn<LeaveRequest, String> typeCol = new TableColumn<>("Tip");
-        typeCol.setCellValueFactory(data ->
-            new javafx.beans.property.SimpleStringProperty(data.getValue().getLeaveTypeDisplay())
-        );
-        typeCol.setPrefWidth(100);
+        // Header
+        VBox header = new VBox(5);
+        Label title = new Label("📊 Devam Kayıtları");
+        title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+        
+        Label subtitle = new Label("Çalışan giriş-çıkış kayıtlarını görüntüleyin");
+        subtitle.setStyle("-fx-text-fill: #64748b; -fx-font-size: 14px;");
+        
+        header.getChildren().addAll(title, subtitle);
+
+        // Table
+        setupAttendanceTable();
+        VBox.setVgrow(attendanceTable, Priority.ALWAYS);
+        
+        VBox tableCard = new VBox(attendanceTable);
+        tableCard.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                          "-fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 20; " +
+                          "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);");
+
+        content.getChildren().addAll(header, tableCard);
+        VBox.setVgrow(content, Priority.ALWAYS);
+
+        contentArea.getChildren().clear();
+        contentArea.getChildren().add(content);
+        
+        loadAttendanceRecords();
+    }
+
+    private void showLeaveRequest() {
+        VBox content = new VBox(20);
+        content.setMaxWidth(800);
+
+        // Header
+        VBox header = new VBox(5);
+        Label title = new Label("🏖 İzin Talebi");
+        title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+        
+        Label subtitle = new Label("Yeni izin talebi oluşturun");
+        subtitle.setStyle("-fx-text-fill: #64748b; -fx-font-size: 14px;");
+        
+        header.getChildren().addAll(title, subtitle);
+
+        // Form Card
+        VBox formCard = new VBox(20);
+        formCard.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                         "-fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 24; " +
+                         "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(15);
+        grid.setVgap(15);
+
+        int row = 0;
+
+        // Başlangıç Tarihi
+        grid.add(createLabel("Başlangıç"), 0, row);
+        leaveStartPicker.setValue(LocalDate.now());
+        leaveStartPicker.setPrefHeight(40);
+        leaveStartPicker.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                                 "-fx-border-radius: 6; -fx-background-radius: 6;");
+        leaveStartPicker.setMaxWidth(Double.MAX_VALUE);
+        grid.add(leaveStartPicker, 1, row++);
+
+        // Bitiş Tarihi
+        grid.add(createLabel("Bitiş"), 0, row);
+        leaveEndPicker.setValue(LocalDate.now().plusDays(1));
+        leaveEndPicker.setPrefHeight(40);
+        leaveEndPicker.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                               "-fx-border-radius: 6; -fx-background-radius: 6;");
+        leaveEndPicker.setMaxWidth(Double.MAX_VALUE);
+        grid.add(leaveEndPicker, 1, row++);
+
+        // İzin Türü
+        grid.add(createLabel("İzin Türü"), 0, row);
+        leaveTypeBox.setPromptText("Seçiniz");
+        leaveTypeBox.setPrefHeight(40);
+        leaveTypeBox.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                             "-fx-border-radius: 6; -fx-background-radius: 6;");
+        leaveTypeBox.setMaxWidth(Double.MAX_VALUE);
+        grid.add(leaveTypeBox, 1, row++);
+
+        // Sebep
+        grid.add(createLabel("Sebep"), 0, row);
+        leaveReasonArea.setPromptText("İzin sebebini yazınız...");
+        leaveReasonArea.setPrefRowCount(4);
+        leaveReasonArea.setPrefHeight(100);
+        leaveReasonArea.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                                "-fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10; -fx-font-size: 14px;");
+        grid.add(leaveReasonArea, 1, row++);
+
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setMinWidth(150);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().addAll(col1, col2);
+
+        // Buttons
+        HBox buttonBox = new HBox(10);
+        
+        Button submitBtn = new Button("📤 Gönder");
+        submitBtn.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; -fx-padding: 12 24; " +
+                          "-fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 14px;");
+        submitBtn.setOnMouseEntered(e -> submitBtn.setStyle("-fx-background-color: #1e40af; -fx-text-fill: white; " +
+                                                            "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
+        submitBtn.setOnMouseExited(e -> submitBtn.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; " +
+                                                           "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
+        submitBtn.setOnAction(e -> submitLeaveRequest());
+
+        Button clearBtn = new Button("🔄 Temizle");
+        clearBtn.setStyle("-fx-background-color: #64748b; -fx-text-fill: white; -fx-padding: 12 24; " +
+                         "-fx-border-radius: 6; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 14px;");
+        clearBtn.setOnMouseEntered(e -> clearBtn.setStyle("-fx-background-color: #475569; -fx-text-fill: white; " +
+                                                          "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
+        clearBtn.setOnMouseExited(e -> clearBtn.setStyle("-fx-background-color: #64748b; -fx-text-fill: white; " +
+                                                         "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
+        clearBtn.setOnAction(e -> clearLeaveForm());
+
+        buttonBox.getChildren().addAll(submitBtn, clearBtn);
+
+        leaveInfoLabel.setWrapText(true);
+        leaveInfoLabel.setMaxWidth(Double.MAX_VALUE);
+
+        formCard.getChildren().addAll(grid, buttonBox, leaveInfoLabel);
+
+        content.getChildren().addAll(header, formCard);
+        
+        contentArea.getChildren().clear();
+        contentArea.getChildren().add(content);
+    }
+
+    private void showLeaveList() {
+        VBox content = new VBox(20);
+
+        // Header
+        VBox header = new VBox(5);
+        Label title = new Label("📝 İzin Listesi");
+        title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+        
+        Label subtitle = new Label("Tüm izin taleplerini görüntüleyin");
+        subtitle.setStyle("-fx-text-fill: #64748b; -fx-font-size: 14px;");
+        
+        header.getChildren().addAll(title, subtitle);
+
+        // Table
+        setupLeaveTable();
+        VBox.setVgrow(leaveTable, Priority.ALWAYS);
+        
+        VBox tableCard = new VBox(leaveTable);
+        tableCard.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                          "-fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 20; " +
+                          "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);");
+
+        content.getChildren().addAll(header, tableCard);
+        VBox.setVgrow(content, Priority.ALWAYS);
+
+        contentArea.getChildren().clear();
+        contentArea.getChildren().add(content);
+        
+        loadLeaveRequests();
+    }
+
+    private Label createLabel(String text) {
+        Label label = new Label(text);
+        label.setStyle("-fx-font-weight: 600; -fx-text-fill: #334155;");
+        return label;
+    }
+
+    private void setupAttendanceTable() {
+        attendanceTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        attendanceTable.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                                "-fx-border-radius: 12; -fx-background-radius: 12;");
+
+        // Mevcut sütunları temizle
+        attendanceTable.getColumns().clear();
+
+        TableColumn<Attendance, Integer> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("attendanceId"));
+        idCol.setPrefWidth(60);
+
+        TableColumn<Attendance, Integer> empIdCol = new TableColumn<>("Çalışan ID");
+        empIdCol.setCellValueFactory(new PropertyValueFactory<>("employeeId"));
+
+        TableColumn<Attendance, LocalDate> dateCol = new TableColumn<>("Tarih");
+        dateCol.setCellValueFactory(new PropertyValueFactory<>("date"));
+
+        TableColumn<Attendance, LocalTime> checkInCol = new TableColumn<>("Giriş");
+        checkInCol.setCellValueFactory(new PropertyValueFactory<>("checkInTime"));
+
+        TableColumn<Attendance, LocalTime> checkOutCol = new TableColumn<>("Çıkış");
+        checkOutCol.setCellValueFactory(new PropertyValueFactory<>("checkOutTime"));
+
+        TableColumn<Attendance, BigDecimal> hoursCol = new TableColumn<>("Saat");
+        hoursCol.setCellValueFactory(new PropertyValueFactory<>("totalHours"));
+
+        attendanceTable.getColumns().addAll(idCol, empIdCol, dateCol, checkInCol, checkOutCol, hoursCol);
+    }
+
+    private void setupLeaveTable() {
+        leaveTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        leaveTable.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                           "-fx-border-radius: 12; -fx-background-radius: 12;");
+
+        // Mevcut sütunları temizle
+        leaveTable.getColumns().clear();
+
+        TableColumn<LeaveRequest, Integer> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("requestId"));
+        idCol.setPrefWidth(60);
+
+        TableColumn<LeaveRequest, Integer> empCol = new TableColumn<>("Çalışan ID");
+        empCol.setCellValueFactory(new PropertyValueFactory<>("employeeId"));
+
+        TableColumn<LeaveRequest, String> typeCol = new TableColumn<>("Tür");
+        typeCol.setCellValueFactory(new PropertyValueFactory<>("leaveType"));
 
         TableColumn<LeaveRequest, LocalDate> startCol = new TableColumn<>("Başlangıç");
         startCol.setCellValueFactory(new PropertyValueFactory<>("startDate"));
@@ -385,225 +506,195 @@ public class AttendanceView extends BorderPane {
         TableColumn<LeaveRequest, LocalDate> endCol = new TableColumn<>("Bitiş");
         endCol.setCellValueFactory(new PropertyValueFactory<>("endDate"));
 
-        TableColumn<LeaveRequest, Integer> daysCol = new TableColumn<>("Gün");
-        daysCol.setCellValueFactory(new PropertyValueFactory<>("totalDays"));
-        daysCol.setPrefWidth(50);
-
         TableColumn<LeaveRequest, String> statusCol = new TableColumn<>("Durum");
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
 
-        TableColumn<LeaveRequest, String> reasonCol = new TableColumn<>("Sebep");
-        reasonCol.setCellValueFactory(new PropertyValueFactory<>("reason"));
-        reasonCol.setPrefWidth(150);
-
-        leaveTable.getColumns().addAll(empCol, typeCol, startCol, endCol, daysCol, statusCol, reasonCol);
-        return leaveTable;
-    }
-
-    // ============================================
-    // İŞLEM METODLARItable
-    // ============================================
-    private void checkIn() {
-        Employee emp = employeeBox.getValue();
-        if (emp == null) {
-            showError("Lütfen çalışan seçin");
-            return;
-        }
-
-        var result = attendanceController.checkIn(emp.getEmployeeId());
-        if (result.success()) {
-            showSuccess(result.message());
-            loadTodayAttendances();
-        } else {
-            showError(result.message());
-        }
-    }
-
-    private void checkOut() {
-        Employee emp = employeeBox.getValue();
-        if (emp == null) {
-            showError("Lütfen çalışan seçin");
-            return;
-        }
-
-        var result = attendanceController.checkOut(emp.getEmployeeId());
-        if (result.success()) {
-            showSuccess(result.message());
-            loadTodayAttendances();
-        } else {
-            showError(result.message());
-        }
-    }
-
-    private void checkTodayStatus() {
-        Employee emp = employeeBox.getValue();
-        if (emp == null) {
-            showError("Lütfen çalışan seçin");
-            return;
-        }
-
-        var result = attendanceController.getTodayStatus(emp.getEmployeeId());
-        if (result.success() && result.attendance() != null) {
-            Attendance att = result.attendance();
-            String status = String.format(
-                "Durum: %s\nGiriş: %s\nÇıkış: %s\nSaat: %.2f",
-                att.getStatus(),
-                att.getCheckIn(),
-                att.getCheckOut() != null ? att.getCheckOut() : "-",
-                att.getHoursWorked() != null ? att.getHoursWorked() : 0
-            );
-            statusLabel.setText(status);
-        } else {
-            statusLabel.setText("Bugün için kayıt yok");
-        }
-    }
-
-    private void addManualAttendance() {
-        Employee emp = employeeBox.getValue();
-        if (emp == null) {
-            showError("Çalışan seçin");
-            return;
-        }
-
-        try {
-            LocalDate date = datePicker.getValue();
-            LocalTime checkIn = LocalTime.parse(checkInField.getText());
-            LocalTime checkOut = LocalTime.parse(checkOutField.getText());
-            String notes = notesArea.getText();
-
-            var result = attendanceController.addManualAttendance(
-                emp.getEmployeeId(), date, checkIn, checkOut, notes
-            );
-
-            if (result.success()) {
-                showSuccess("Manuel kayıt eklendi");
-                checkInField.clear();
-                checkOutField.clear();
-                notesArea.clear();
-            } else {
-                showError(result.message());
-            }
-
-        } catch (Exception e) {
-            showError("Saat formatı hatalı (örn: 09:00)");
-        }
-    }
-
-    private void loadTodayAttendances() {
-        var result = attendanceController.getTodayAttendances();
-        if (result.success()) {
-            TableView<Attendance> todayTable = (TableView<Attendance>)
-                ((VBox) ((BorderPane) tabPane.getTabs().get(0).getContent()).getCenter()).getChildren().get(1);
-            todayTable.setItems(FXCollections.observableArrayList(result.attendances()));
-        }
-    }
-
-    private void loadAttendanceHistory(int empId, LocalDate start, LocalDate end) {
-        var result = attendanceController.getAttendancesByDateRange(empId, start, end);
-        if (result.success()) {
-            attendanceTable.setItems(FXCollections.observableArrayList(result.attendances()));
-        } else {
-            showError(result.message());
-        }
-    }
-
-    private void calculateStats(int empId, LocalDate start, LocalDate end, Label label) {
-        var hoursResult = attendanceController.calculateTotalHours(empId, start, end);
-        var overtimeResult = attendanceController.calculateOvertimeHours(empId, start, end);
-        var rateResult = attendanceController.calculateAttendanceRate(empId, start, end);
-
-        String stats = String.format(
-            "Toplam Saat: %.2f\nMesai: %.2f\nDevam Oranı: %%%.1f",
-            hoursResult.hours(), overtimeResult.hours(), rateResult.rate()
-        );
-        label.setText(stats);
-    }
-
-    private void createLeaveRequest(ComboBox<Employee> empBox) {
-        Employee emp = empBox.getValue();
-        if (emp == null) {
-            showError("Çalışan seçin");
-            return;
-        }
-
-        String type = leaveTypeBox.getValue();
-        if (type == null) {
-            showError("İzin tipi seçin");
-            return;
-        }
-
-        var result = attendanceController.createLeaveRequest(
-            emp.getEmployeeId(), type,
-            leaveStartPicker.getValue(),
-            leaveEndPicker.getValue(),
-            leaveReasonArea.getText()
-        );
-
-        if (result.success()) {
-            showSuccess("İzin talebi oluşturuldu");
-            leaveReasonArea.clear();
-        } else {
-            showError(result.message());
-        }
-    }
-
-    private void loadPendingLeaves() {
-        var result = attendanceController.getPendingLeaveRequests();
-        if (result.success()) {
-            leaveTable.setItems(FXCollections.observableArrayList(result.leaves()));
-        }
-    }
-
-    private void loadAllLeaves(ComboBox<Employee> empBox) {
-        Employee emp = empBox.getValue();
-        if (emp == null) {
-            var result = attendanceController.getPendingLeaveRequests();
-            if (result.success()) {
-                leaveTable.setItems(FXCollections.observableArrayList(result.leaves()));
-            }
-        } else {
-            var result = attendanceController.getEmployeeLeaveRequests(emp.getEmployeeId());
-            if (result.success()) {
-                leaveTable.setItems(FXCollections.observableArrayList(result.leaves()));
-            }
-        }
+        leaveTable.getColumns().addAll(idCol, empCol, typeCol, startCol, endCol, statusCol);
     }
 
     private void loadEmployees() {
-        var result = employeeController.getActiveEmployees();
-        if (result.success()) {
+        var result = employeeController.getAllEmployees();
+        if (result.success() && result.employees() != null) {
             employeeBox.setItems(FXCollections.observableArrayList(result.employees()));
-            employeeBox.setConverter(new javafx.util.StringConverter<Employee>() {
+            employeeBox.setButtonCell(new javafx.scene.control.ListCell<Employee>() {
                 @Override
-                public String toString(Employee emp) {
-                    return emp == null ? "" : emp.getFullName();
+                protected void updateItem(Employee emp, boolean empty) {
+                    super.updateItem(emp, empty);
+                    if (empty || emp == null) {
+                        setText(null);
+                    } else {
+                        setText(emp.getFirstName() + " " + emp.getLastName());
+                    }
                 }
+            });
+            employeeBox.setCellFactory(lv -> new javafx.scene.control.ListCell<Employee>() {
                 @Override
-                public Employee fromString(String string) {
-                    return null;
+                protected void updateItem(Employee emp, boolean empty) {
+                    super.updateItem(emp, empty);
+                    if (empty || emp == null) {
+                        setText(null);
+                    } else {
+                        setText(emp.getFirstName() + " " + emp.getLastName());
+                    }
                 }
             });
         }
     }
 
     private void loadLeaveTypes() {
-        leaveTypeBox.setItems(FXCollections.observableArrayList(
-            "ANNUAL", "SICK", "UNPAID", "MATERNITY", "PATERNITY"
-        ));
+        leaveTypeBox.setItems(FXCollections.observableArrayList("ANNUAL", "SICK", "PERSONAL", "MATERNITY", "PATERNITY"));
+    }
+
+    private void loadAttendanceRecords() {
+        var result = attendanceController.getTodayAttendances();
+        if (result.success() && result.attendances() != null) {
+            attendanceTable.setItems(FXCollections.observableArrayList(result.attendances()));
+        }
+    }
+
+    private void loadLeaveRequests() {
+        var result = attendanceController.getPendingLeaveRequests();
+        if (result.success() && result.leaves() != null) {
+            leaveTable.setItems(FXCollections.observableArrayList(result.leaves()));
+        }
+    }
+
+    private void saveAttendance() {
+        try {
+            Employee emp = employeeBox.getValue();
+            if (emp == null) {
+                showError("Lütfen çalışan seçiniz");
+                return;
+            }
+
+            LocalDate date = datePicker.getValue();
+            if (date == null) {
+                showError("Lütfen tarih seçiniz");
+                return;
+            }
+
+            String checkInStr = checkInField.getText().trim();
+            String checkOutStr = checkOutField.getText().trim();
+
+            if (checkInStr.isEmpty()) {
+                showError("Giriş saati gerekli");
+                return;
+            }
+
+            LocalTime checkIn = LocalTime.parse(checkInStr);
+            LocalTime checkOut = checkOutStr.isEmpty() ? null : LocalTime.parse(checkOutStr);
+
+            var result = attendanceController.addManualAttendance(
+                emp.getEmployeeId(),
+                date,
+                checkIn,
+                checkOut,
+                notesArea.getText()
+            );
+            if (result.success()) {
+                showSuccess("Devam kaydı başarıyla oluşturuldu");
+                clearCheckInForm();
+                loadAttendanceRecords();
+            } else {
+                showError("Kayıt başarısız: " + result.message());
+            }
+
+        } catch (Exception e) {
+            showError("Hata: " + e.getMessage());
+        }
+    }
+
+    private void submitLeaveRequest() {
+        try {
+            Employee emp = employeeBox.getValue();
+            if (emp == null) {
+                showLeaveError("Lütfen çalışan seçiniz");
+                return;
+            }
+
+            LocalDate start = leaveStartPicker.getValue();
+            LocalDate end = leaveEndPicker.getValue();
+            String type = leaveTypeBox.getValue();
+            String reason = leaveReasonArea.getText();
+
+            if (start == null || end == null) {
+                showLeaveError("Tarih alanları gerekli");
+                return;
+            }
+
+            if (type == null || type.isEmpty()) {
+                showLeaveError("İzin türü seçiniz");
+                return;
+            }
+
+            if (reason == null || reason.trim().isEmpty()) {
+                showLeaveError("Sebep gerekli");
+                return;
+            }
+
+            var result = attendanceController.createLeaveRequest(
+                emp.getEmployeeId(),
+                type,
+                start,
+                end,
+                reason
+            );
+            if (result.success()) {
+                showLeaveSuccess("İzin talebi başarıyla gönderildi");
+                clearLeaveForm();
+                loadLeaveRequests();
+            } else {
+                showLeaveError("Talep başarısız: " + result.message());
+            }
+
+        } catch (Exception e) {
+            showLeaveError("Hata: " + e.getMessage());
+        }
+    }
+
+    private void clearCheckInForm() {
+        employeeBox.setValue(null);
+        datePicker.setValue(LocalDate.now());
+        checkInField.clear();
+        checkOutField.clear();
+        notesArea.clear();
+        infoLabel.setText("");
+    }
+
+    private void clearLeaveForm() {
+        leaveStartPicker.setValue(LocalDate.now());
+        leaveEndPicker.setValue(LocalDate.now().plusDays(1));
+        leaveTypeBox.setValue(null);
+        leaveReasonArea.clear();
+        leaveInfoLabel.setText("");
     }
 
     private void showSuccess(String msg) {
-        infoLabel.setStyle("-fx-text-fill: green;");
-        infoLabel.setText(msg);
+        infoLabel.setText("✅ " + msg);
+        infoLabel.setStyle("-fx-text-fill: #10b981; -fx-padding: 10; -fx-background-color: #d1fae5; " +
+                          "-fx-border-radius: 6; -fx-background-radius: 6;");
     }
 
     private void showError(String msg) {
-        infoLabel.setStyle("-fx-text-fill: red;");
-        infoLabel.setText(msg);
+        infoLabel.setText("❌ " + msg);
+        infoLabel.setStyle("-fx-text-fill: #ef4444; -fx-padding: 10; -fx-background-color: #fee2e2; " +
+                          "-fx-border-radius: 6; -fx-background-radius: 6;");
+    }
+
+    private void showLeaveSuccess(String msg) {
+        leaveInfoLabel.setText("✅ " + msg);
+        leaveInfoLabel.setStyle("-fx-text-fill: #10b981; -fx-padding: 10; -fx-background-color: #d1fae5; " +
+                               "-fx-border-radius: 6; -fx-background-radius: 6;");
+    }
+
+    private void showLeaveError(String msg) {
+        leaveInfoLabel.setText("❌ " + msg);
+        leaveInfoLabel.setStyle("-fx-text-fill: #ef4444; -fx-padding: 10; -fx-background-color: #fee2e2; " +
+                               "-fx-border-radius: 6; -fx-background-radius: 6;");
     }
 
     private void goBack() {
-        stage.getScene().setRoot(new DashboardView(stage, userEmail));
-        stage.setTitle("IK Sistemi - Dashboard");
+        DashboardView dashboard = new DashboardView(stage, userEmail);
+        stage.getScene().setRoot(dashboard);
     }
 }

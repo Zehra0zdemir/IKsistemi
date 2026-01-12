@@ -203,7 +203,7 @@ public class EmployeeManagementView extends BorderPane {
         statusCol.setPrefWidth(100);
 
         table.getColumns().addAll(idCol, nameCol, emailCol, deptCol, posCol, salaryCol, statusCol);
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         table.setOnMouseClicked(event -> {
             if (event.getClickCount() == 1) {

@@ -57,20 +57,13 @@ public class DepartmentDAO {
      */
     public boolean update(Department department) {
         String sql = "UPDATE DEPARTMENTS SET department_name = ?, description = ?, " +
-                    "manager_id = ?, budget = ? WHERE department_id = ?";
+                    "budget = ? WHERE department_id = ?";
         
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, department.getDepartmentName());
             stmt.setString(2, department.getDescription());
-            
-            if (department.getManagerId() != null) {
-                stmt.setInt(3, department.getManagerId());
-            } else {
-                stmt.setNull(3, Types.INTEGER);
-            }
-            
-            stmt.setBigDecimal(4, department.getBudget());
-            stmt.setInt(5, department.getDepartmentId());
+            stmt.setBigDecimal(3, department.getBudget());
+            stmt.setInt(4, department.getDepartmentId());
             
             int affected = stmt.executeUpdate();
             
@@ -135,10 +128,7 @@ public class DepartmentDAO {
      */
     public List<Department> findAll() {
         List<Department> departments = new ArrayList<>();
-        String sql = "SELECT d.*, CONCAT(e.first_name, ' ', e.last_name) as manager_name " +
-                    "FROM DEPARTMENTS d " +
-                    "LEFT JOIN EMPLOYEES e ON d.manager_id = e.employee_id " +
-                    "ORDER BY d.department_name";
+        String sql = "SELECT * FROM DEPARTMENTS ORDER BY department_name";
         
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -158,11 +148,9 @@ public class DepartmentDAO {
      */
     public List<Department> searchByName(String name) {
         List<Department> departments = new ArrayList<>();
-        String sql = "SELECT d.*, CONCAT(e.first_name, ' ', e.last_name) as manager_name " +
-                    "FROM DEPARTMENTS d " +
-                    "LEFT JOIN EMPLOYEES e ON d.manager_id = e.employee_id " +
-                    "WHERE d.department_name LIKE ? " +
-                    "ORDER BY d.department_name";
+        String sql = "SELECT * FROM DEPARTMENTS " +
+                    "WHERE department_name LIKE ? " +
+                    "ORDER BY department_name";
         
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, "%" + name + "%");
@@ -204,24 +192,7 @@ public class DepartmentDAO {
         Department dept = new Department();
         dept.setDepartmentId(rs.getInt("department_id"));
         dept.setDepartmentName(rs.getString("department_name"));
-        dept.setDescription(rs.getString("description"));
         
-        int managerId = rs.getInt("manager_id");
-        if (!rs.wasNull()) {
-            dept.setManagerId(managerId);
-        }
-        
-        dept.setBudget(rs.getBigDecimal("budget"));
-        
-        Timestamp createdTs = rs.getTimestamp("created_at");
-        if (createdTs != null) {
-            dept.setCreatedAt(createdTs.toLocalDateTime());
-        }
-        
-        String managerName = rs.getString("manager_name");
-        if (managerName != null) {
-            dept.setManagerName(managerName);
-        }
         
         return dept;
     }
