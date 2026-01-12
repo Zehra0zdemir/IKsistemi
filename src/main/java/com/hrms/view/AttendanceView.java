@@ -35,6 +35,7 @@ public class AttendanceView extends BorderPane {
     private final Label infoLabel = new Label();
 
     // İzin formu
+    private final TextArea leavePersonNameLabel = new TextArea();
     private final DatePicker leaveStartPicker = new DatePicker();
     private final DatePicker leaveEndPicker = new DatePicker();
     private final ComboBox<String> leaveTypeBox = new ComboBox<>();
@@ -338,6 +339,44 @@ public class AttendanceView extends BorderPane {
         grid.setVgap(15);
 
         int row = 0;
+        
+        // Çalışan seçimi
+        grid.add(createLabel("Çalışan"), 0, row);
+        ComboBox<Employee> leaveEmployeeBox = new ComboBox<>();
+        leaveEmployeeBox.setPromptText("Seçiniz");
+        leaveEmployeeBox.setPrefHeight(40);
+        leaveEmployeeBox.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 1; " +
+                                 "-fx-border-radius: 6; -fx-background-radius: 6;");
+        leaveEmployeeBox.setMaxWidth(Double.MAX_VALUE);
+        
+        // Çalışanları yükle
+        var result = employeeController.getAllEmployees();
+        if (result.success() && result.employees() != null) {
+            leaveEmployeeBox.setItems(FXCollections.observableArrayList(result.employees()));
+            leaveEmployeeBox.setButtonCell(new javafx.scene.control.ListCell<Employee>() {
+                @Override
+                protected void updateItem(Employee emp, boolean empty) {
+                    super.updateItem(emp, empty);
+                    if (empty || emp == null) {
+                        setText(null);
+                    } else {
+                        setText(emp.getFirstName() + " " + emp.getLastName());
+                    }
+                }
+            });
+            leaveEmployeeBox.setCellFactory(lv -> new javafx.scene.control.ListCell<Employee>() {
+                @Override
+                protected void updateItem(Employee emp, boolean empty) {
+                    super.updateItem(emp, empty);
+                    if (empty || emp == null) {
+                        setText(null);
+                    } else {
+                        setText(emp.getFirstName() + " " + emp.getLastName());
+                    }
+                }
+            });
+        }
+        grid.add(leaveEmployeeBox, 1, row++);
 
         // Başlangıç Tarihi
         grid.add(createLabel("Başlangıç"), 0, row);
@@ -347,7 +386,7 @@ public class AttendanceView extends BorderPane {
                                  "-fx-border-radius: 6; -fx-background-radius: 6;");
         leaveStartPicker.setMaxWidth(Double.MAX_VALUE);
         grid.add(leaveStartPicker, 1, row++);
-
+        
         // Bitiş Tarihi
         grid.add(createLabel("Bitiş"), 0, row);
         leaveEndPicker.setValue(LocalDate.now().plusDays(1));
@@ -391,7 +430,7 @@ public class AttendanceView extends BorderPane {
                                                             "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
         submitBtn.setOnMouseExited(e -> submitBtn.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; " +
                                                            "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
-        submitBtn.setOnAction(e -> submitLeaveRequest());
+        submitBtn.setOnAction(e -> submitLeaveRequest(leaveEmployeeBox));
 
         Button clearBtn = new Button("🔄 Temizle");
         clearBtn.setStyle("-fx-background-color: #64748b; -fx-text-fill: white; -fx-padding: 12 24; " +
@@ -400,7 +439,7 @@ public class AttendanceView extends BorderPane {
                                                           "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
         clearBtn.setOnMouseExited(e -> clearBtn.setStyle("-fx-background-color: #64748b; -fx-text-fill: white; " +
                                                          "-fx-padding: 12 24; -fx-border-radius: 6; -fx-background-radius: 6; -fx-font-size: 14px;"));
-        clearBtn.setOnAction(e -> clearLeaveForm());
+        clearBtn.setOnAction(e -> clearLeaveForm(leaveEmployeeBox));
 
         buttonBox.getChildren().addAll(submitBtn, clearBtn);
 
@@ -509,7 +548,51 @@ public class AttendanceView extends BorderPane {
         TableColumn<LeaveRequest, String> statusCol = new TableColumn<>("Durum");
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
 
-        leaveTable.getColumns().addAll(idCol, empCol, typeCol, startCol, endCol, statusCol);
+        // Aksiyon sütunu - Onay/Reddet butonları
+        TableColumn<LeaveRequest, Void> actionCol = new TableColumn<>("İşlemler");
+        actionCol.setPrefWidth(200);
+        actionCol.setCellFactory(param -> new TableCell<>() {
+            private final Button approveBtn = new Button("✅ Onayla");
+            private final Button rejectBtn = new Button("❌ Reddet");
+            private final HBox buttons = new HBox(5, approveBtn, rejectBtn);
+
+            {
+                approveBtn.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; " +
+                                   "-fx-padding: 5 10; -fx-border-radius: 4; -fx-background-radius: 4; " +
+                                   "-fx-font-size: 12px; -fx-cursor: hand;");
+                rejectBtn.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; " +
+                                  "-fx-padding: 5 10; -fx-border-radius: 4; -fx-background-radius: 4; " +
+                                  "-fx-font-size: 12px; -fx-cursor: hand;");
+
+                approveBtn.setOnAction(e -> {
+                    LeaveRequest leave = getTableView().getItems().get(getIndex());
+                    approveLeave(leave);
+                });
+
+                rejectBtn.setOnAction(e -> {
+                    LeaveRequest leave = getTableView().getItems().get(getIndex());
+                    rejectLeave(leave);
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null);
+                } else {
+                    LeaveRequest leave = getTableView().getItems().get(getIndex());
+                    // Sadece PENDING durumundaki izinler için butonları göster
+                    if ("PENDING".equals(leave.getStatus())) {
+                        setGraphic(buttons);
+                    } else {
+                        setGraphic(null);
+                    }
+                }
+            }
+        });
+
+        leaveTable.getColumns().addAll(idCol, empCol, typeCol, startCol, endCol, statusCol, actionCol);
     }
 
     private void loadEmployees() {
@@ -604,9 +687,9 @@ public class AttendanceView extends BorderPane {
         }
     }
 
-    private void submitLeaveRequest() {
+    private void submitLeaveRequest(ComboBox<Employee> leaveEmployeeBox) {
         try {
-            Employee emp = employeeBox.getValue();
+            Employee emp = leaveEmployeeBox.getValue();
             if (emp == null) {
                 showLeaveError("Lütfen çalışan seçiniz");
                 return;
@@ -641,7 +724,7 @@ public class AttendanceView extends BorderPane {
             );
             if (result.success()) {
                 showLeaveSuccess("İzin talebi başarıyla gönderildi");
-                clearLeaveForm();
+                clearLeaveForm(leaveEmployeeBox);
                 loadLeaveRequests();
             } else {
                 showLeaveError("Talep başarısız: " + result.message());
@@ -661,7 +744,8 @@ public class AttendanceView extends BorderPane {
         infoLabel.setText("");
     }
 
-    private void clearLeaveForm() {
+    private void clearLeaveForm(ComboBox<Employee> leaveEmployeeBox) {
+        leaveEmployeeBox.setValue(null);
         leaveStartPicker.setValue(LocalDate.now());
         leaveEndPicker.setValue(LocalDate.now().plusDays(1));
         leaveTypeBox.setValue(null);
@@ -691,6 +775,113 @@ public class AttendanceView extends BorderPane {
         leaveInfoLabel.setText("❌ " + msg);
         leaveInfoLabel.setStyle("-fx-text-fill: #ef4444; -fx-padding: 10; -fx-background-color: #fee2e2; " +
                                "-fx-border-radius: 6; -fx-background-radius: 6;");
+    }
+
+    private void approveLeave(LeaveRequest leave) {
+        try {
+            // Onaylayan kişi ID'si için giriş yapan kullanıcının ID'sini bulmamız gerekir
+            // Şimdilik sabit bir değer kullanıyoruz, gerçek uygulamada session'dan alınmalı
+            Employee currentUser = getCurrentUser();
+            if (currentUser == null) {
+                showAlert("Hata", "Kullanıcı bilgisi bulunamadı", Alert.AlertType.ERROR);
+                return;
+            }
+
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("İzin Onaylama");
+            confirm.setHeaderText("İzin talebini onaylamak istediğinizden emin misiniz?");
+            confirm.setContentText("Çalışan ID: " + leave.getEmployeeId() + "\n" +
+                                   "Tarih: " + leave.getStartDate() + " - " + leave.getEndDate() + "\n" +
+                                   "Tür: " + leave.getLeaveType());
+
+            confirm.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.OK) {
+                    var result = attendanceController.approveLeaveRequest(
+                        leave.getLeaveId(), 
+                        currentUser.getEmployeeId()
+                    );
+                    if (result.success()) {
+                        showAlert("Başarılı", "İzin talebi onaylandı", Alert.AlertType.INFORMATION);
+                        loadLeaveRequests(); // Tabloyu yenile
+                    } else {
+                        showAlert("Hata", "Onaylama başarısız: " + result.message(), Alert.AlertType.ERROR);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            showAlert("Hata", "İşlem sırasında hata: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    private void rejectLeave(LeaveRequest leave) {
+        try {
+            Employee currentUser = getCurrentUser();
+            if (currentUser == null) {
+                showAlert("Hata", "Kullanıcı bilgisi bulunamadı", Alert.AlertType.ERROR);
+                return;
+            }
+
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("İzin Reddetme");
+            confirm.setHeaderText("İzin talebini reddetmek istediğinizden emin misiniz?");
+            confirm.setContentText("Çalışan ID: " + leave.getEmployeeId() + "\n" +
+                                   "Tarih: " + leave.getStartDate() + " - " + leave.getEndDate() + "\n" +
+                                   "Tür: " + leave.getLeaveType());
+
+            confirm.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.OK) {
+                    var result = attendanceController.rejectLeaveRequest(
+                        leave.getLeaveId(), 
+                        currentUser.getEmployeeId()
+                    );
+                    if (result.success()) {
+                        showAlert("Başarılı", "İzin talebi reddedildi", Alert.AlertType.INFORMATION);
+                        loadLeaveRequests(); // Tabloyu yenile
+                    } else {
+                        showAlert("Hata", "Reddetme başarısız: " + result.message(), Alert.AlertType.ERROR);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            showAlert("Hata", "İşlem sırasında hata: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    private Employee getCurrentUser() {
+        // Email'e göre kullanıcıyı bul
+        var result = employeeController.getAllEmployees();
+        if (result.success() && result.employees() != null) {
+            // Önce email ile eşleşmeyi dene
+            for (Employee emp : result.employees()) {
+                if (emp.getEmail() != null && emp.getEmail().trim().equalsIgnoreCase(userEmail.trim())) {
+                    return emp;
+                }
+            }
+            
+            // Email bulunamazsa, ilk aktif çalışanı kullan (fallback)
+            for (Employee emp : result.employees()) {
+                if (emp.isActive()) {
+                    System.out.println("UYARI: Email eşleşmesi bulunamadı, fallback kullanıcı: " + emp.getFullName());
+                    return emp;
+                }
+            }
+            
+            // Hiçbir aktif kullanıcı yoksa ilk kullanıcıyı döndür
+            if (!result.employees().isEmpty()) {
+                Employee emp = result.employees().get(0);
+                System.out.println("UYARI: Aktif kullanıcı bulunamadı, ilk kullanıcı kullanılıyor: " + emp.getFullName());
+                return emp;
+            }
+        }
+        return null;
+    }
+
+    private void showAlert(String title, String message, Alert.AlertType type) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     private void goBack() {

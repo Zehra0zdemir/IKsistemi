@@ -28,6 +28,8 @@ public class LeaveRequest {
         this.endDate = endDate;
         this.reason = reason;
         this.status = "PENDING";
+        // Toplam gün sayısını hesapla (başlangıç ve bitiş dahil)
+        this.totalDays = (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
     }
     
     public boolean isPending() { return "PENDING".equals(status); }

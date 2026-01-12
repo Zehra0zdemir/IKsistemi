@@ -28,8 +28,33 @@ public class LeaveRequestDAO {
      * Yeni izin talebi ekler
      */
     public boolean insert(LeaveRequest leaveRequest) {
+        /*INSERT INTO `hrms_db`.`leave_requests`
+(`leave_id`,
+`employee_id`,
+`leave_type`,
+`start_date`,
+`end_date`,
+`total_days`,
+`status`,
+`reason`,
+`approved_by`,
+`request_date`,
+`approval_date`)
+VALUES
+(<{leave_id: }>,
+<{employee_id: }>,
+<{leave_type: }>,
+<{start_date: }>,
+<{end_date: }>,
+<{total_days: }>,
+<{status: PENDING}>,
+<{reason: }>,
+<{approved_by: }>,
+<{request_date: CURRENT_TIMESTAMP}>,
+<{approval_date: }>);
+ */
         String sql = "INSERT INTO LEAVE_REQUESTS (employee_id, leave_type, start_date, end_date, " +
-                    "reason, status) VALUES (?, ?, ?, ?, ?, ?)";
+                    "reason, status,total_days) VALUES (?, ?, ?, ?, ?, ?,?)";
         
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setInt(1, leaveRequest.getEmployeeId());
@@ -38,7 +63,7 @@ public class LeaveRequestDAO {
             stmt.setDate(4, Date.valueOf(leaveRequest.getEndDate()));
             stmt.setString(5, leaveRequest.getReason());
             stmt.setString(6, leaveRequest.getStatus() != null ? leaveRequest.getStatus() : "PENDING");
-            
+            stmt.setInt(7, Date.valueOf(leaveRequest.getStartDate()).compareTo(Date.valueOf(leaveRequest.getEndDate())));
             int affected = stmt.executeUpdate();
             
             if (affected > 0) {
