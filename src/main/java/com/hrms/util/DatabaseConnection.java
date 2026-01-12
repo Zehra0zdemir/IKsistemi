@@ -13,7 +13,7 @@ public class DatabaseConnection {
     private static final String URL =
             "jdbc:mysql://localhost:3306/hrms_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
     private static final String USER = "root";
-    private static final String PASSWORD = "burak123123";  // ← MySQL ŞİFRENİ BURAYA YAZ!
+    private static final String PASSWORD = "1234";  // ← MySQL ŞİFRENİ BURAYA YAZ!
 
     // Singleton instance
     private static DatabaseConnection instance;
